@@ -1,0 +1,72 @@
+services:
+  database:
+    image: postgres:17-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - database_data:/var/lib/postgresql/data
+    networks:
+      - app
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: strapi
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${STRAPI_ENV}
+      HOST: ${STRAPI_HOST}
+      PORT: ${STRAPI_PORT}
+      DATABASE_CLIENT: ${STRAPI_DB_CLIENT}
+      DATABASE_HOST: ${STRAPI_DB_HOST}
+      DATABASE_PORT: ${STRAPI_DB_PORT}
+      DATABASE_NAME: ${STRAPI_DB_DB}
+      DATABASE_USERNAME: ${STRAPI_DB_USER}
+      DATABASE_PASSWORD: ${STRAPI_DB_PASSWORD}
+      APP_KEYS: ${STRAPI_APP_KEYS}
+      API_TOKEN_SALT: ${STRAPI_API_TOKEN_SALT}
+      ADMIN_JWT_SECRET: ${STRAPI_ADMIN_JWT_SECRET}
+      JWT_SECRET: ${STRAPI_JWT_SECRET}
+      TRANSFER_TOKEN_SALT: ${STRAPI_TRANSFER_TOKEN_SALT}
+      ENCRYPTION_KEY: ${STRAPI_ENCRYPTION_KEY}
+    ports:
+      - "1337:1337"
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    depends_on:
+      - database
+    networks:
+      - app
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: nextjs
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_STRAPI_URL: http://localhost:1337
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - server
+    networks:
+      - app
+
+volumes:
+  database_data:
+
+networks:
+  app:
+    driver: bridge
